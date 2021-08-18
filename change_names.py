@@ -14,7 +14,7 @@ def change_names(cont:int, folder:str):
     filenames=sorted(os.listdir())
     
     for name in filenames:
-        os.rename(name,str(cont)+'.png')
+        os.rename(name, folder+str(cont)+'.png')
         cont+=1
     
     os.chdir('..')

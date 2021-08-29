@@ -49,13 +49,13 @@ github_url_inp = 'https://github.com/pepetonof/unet_hu/tree/main/input'
 github_url_msk = 'https://github.com/pepetonof/unet_hu/tree/main/target'
 
 #Hyperparameters
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 0.0001
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 BATCH_SIZE = 1
-NUM_EPOCHS = 35
-NUM_WORKERS = 0
-IMAGE_HEIGHT = 40
-IMAGE_WIDTH = 60
+NUM_EPOCHS = 10
+NUM_WORKERS = 0 #0 In case that GPI is nos available
+IMAGE_HEIGHT = 572
+IMAGE_WIDTH = 572
 PIN_MEMORY = True
 
 #Obtiene los nombres de los archivos de la liga a repositorio
@@ -218,7 +218,10 @@ train_dl, valid_dl, train_ds, valid_ds = get_loaders(
 class DoubleConv(nn.Module):
   def __init__(self, in_channels, out_channels):
     super(DoubleConv, self).__init__()
-
+    
+    #Initialize weights with a normal distribution
+    self.initialize_weights()
+    
     self.conv=nn.Sequential(
         nn.Conv2d(in_channels, out_channels, 3, 1, 1, bias=False),
         nn.BatchNorm2d(out_channels),
@@ -231,6 +234,10 @@ class DoubleConv(nn.Module):
   
   def forward(self, x):
     return self.conv(x)
+
+  def initialize_weights(self):
+      for m in self.module():
+          nn.init.normal(m.weight)
 
 #Unet
 class UNET(nn.Module):
@@ -268,6 +275,7 @@ class UNET(nn.Module):
       
       x=self.bottleneck(x)
       skip_connections=skip_connections[::-1]
+      
       for idx in range(0, len(self.ups), 2):
         x= self.ups[idx](x)
         skip_connection = skip_connections[idx//2]
@@ -291,12 +299,7 @@ def train_fn(loader, model, optimizer, loss_fn, scaler):
   loop = tqdm(loader)
   for batch_idx, (data, targets) in enumerate(loop):
     data=data.to(device=DEVICE)
-    #print('data_shape',data.shape)
-    
-    #float for Binary Cross Entropy Loss
-    #its already float
     targets=targets.float().unsqueeze(1).to(device=DEVICE)
-    #print('targets_shape',targets.shape)
     
     #forward
     if torch.cuda.is_available():
